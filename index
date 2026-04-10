@@ -1,0 +1,1009 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智能医疗陪护系统 - 核心功能详解</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        body {
+            font-family: 'Inter', 'Noto Sans SC', sans-serif;
+            background: #f0f4f8;
+            overflow-x: hidden;
+        }
+        
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+        }
+        
+        .gradient-text {
+            background: linear-gradient(135deg, #0ea5e9 0%, #3b82f6 50%, #8b5cf6 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .emergency-red { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); }
+        .urgent-yellow { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); }
+        .normal-green { background: linear-gradient(135deg, #10b981 0%, #059669 100%); }
+        
+        .pulse-ring {
+            animation: pulse-ring 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+        }
+        
+        @keyframes pulse-ring {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 20px rgba(239, 68, 68, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+        
+        .wave-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            opacity: 0.4;
+            background: 
+                radial-gradient(circle at 20% 50%, rgba(14, 165, 233, 0.15) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(139, 92, 246, 0.15) 0%, transparent 50%),
+                radial-gradient(circle at 40% 20%, rgba(16, 185, 129, 0.1) 0%, transparent 50%);
+        }
+        
+        .feature-card {
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .feature-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 40px -5px rgba(0, 0, 0, 0.1);
+        }
+        
+        .chat-bubble {
+            animation: slideIn 0.3s ease-out;
+        }
+        
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .typing-dot {
+            animation: typing 1.4s infinite ease-in-out both;
+        }
+        
+        .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+        .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+        
+        @keyframes typing {
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1); }
+        }
+        
+        .nav-path {
+            stroke-dasharray: 1000;
+            stroke-dashoffset: 1000;
+            animation: drawPath 3s ease-in-out forwards;
+        }
+        
+        @keyframes drawPath {
+            to { stroke-dashoffset: 0; }
+        }
+        
+        .medical-cross {
+            background: linear-gradient(135deg, #0ea5e9 0%, #3b82f6 100%);
+            clip-path: polygon(20% 0%, 80% 0%, 80% 20%, 100% 20%, 100% 80%, 80% 80%, 80% 100%, 20% 100%, 20% 80%, 0% 80%, 0% 20%, 20% 20%);
+        }
+        
+        .tab-active {
+            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+            color: white;
+        }
+        
+        .confidence-bar {
+            transition: width 1s ease-out;
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.6s ease-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="text-slate-800">
+
+    <div class="wave-bg"></div>
+
+    <!-- Header -->
+    <header class="fixed top-0 w-full z-50 glass-panel border-b border-white/20">
+        <div class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 medical-cross flex items-center justify-center">
+                    <i data-lucide="activity" class="text-white w-6 h-6"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold text-slate-800">MediCare AI</h1>
+                    <p class="text-xs text-slate-500">智能医疗陪护系统 3.2</p>
+                </div>
+            </div>
+            <nav class="hidden md:flex gap-8">
+                <button onclick="scrollToSection('triage')" class="text-sm font-medium hover:text-blue-600 transition-colors">智能导诊</button>
+                <button onclick="scrollToSection('previsit')" class="text-sm font-medium hover:text-blue-600 transition-colors">诊前预问诊</button>
+                <button onclick="scrollToSection('accompaniment')" class="text-sm font-medium hover:text-blue-600 transition-colors">诊中陪护</button>
+                <button onclick="scrollToSection('postcare')" class="text-sm font-medium hover:text-blue-600 transition-colors">诊后关怀</button>
+            </nav>
+            <button class="md:hidden" onclick="toggleMobileMenu()">
+                <i data-lucide="menu" class="w-6 h-6"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="pt-32 pb-20 px-6 relative overflow-hidden">
+        <div class="max-w-7xl mx-auto text-center relative z-10">
+            <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-50 border border-blue-100 mb-6 fade-in">
+                <span class="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
+                <span class="text-sm font-medium text-blue-700">AI 驱动的全流程医疗陪护</span>
+            </div>
+            <h1 class="text-5xl md:text-7xl font-bold mb-6 leading-tight fade-in" style="animation-delay: 0.1s">
+                让每一次就医<br>
+                <span class="gradient-text">都安心、高效、温暖</span>
+            </h1>
+            <p class="text-xl text-slate-600 max-w-2xl mx-auto mb-12 fade-in" style="animation-delay: 0.2s">
+                融合多模态AI技术，覆盖诊前、诊中、诊后全周期，为患者提供智能导诊、预问诊、实时陪护与康复管理服务
+            </p>
+            
+            <!-- Feature Navigation Tabs -->
+            <div class="flex flex-wrap justify-center gap-4 mb-16 fade-in" style="animation-delay: 0.3s">
+                <button onclick="activateFeature(0)" class="feature-tab px-6 py-3 rounded-xl bg-white shadow-lg hover:shadow-xl transition-all border border-slate-100 flex items-center gap-2 group">
+                    <div class="w-8 h-8 rounded-lg emergency-red flex items-center justify-center text-white group-hover:scale-110 transition-transform">
+                        <i data-lucide="siren" class="w-4 h-4"></i>
+                    </div>
+                    <span class="font-medium">安全为先</span>
+                </button>
+                <button onclick="activateFeature(1)" class="feature-tab px-6 py-3 rounded-xl bg-white shadow-lg hover:shadow-xl transition-all border border-slate-100 flex items-center gap-2 group">
+                    <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-400 flex items-center justify-center text-white group-hover:scale-110 transition-transform">
+                        <i data-lucide="clipboard-list" class="w-4 h-4"></i>
+                    </div>
+                    <span class="font-medium">效率提升</span>
+                </button>
+                <button onclick="activateFeature(2)" class="feature-tab px-6 py-3 rounded-xl bg-white shadow-lg hover:shadow-xl transition-all border border-slate-100 flex items-center gap-2 group">
+                    <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-pink-400 flex items-center justify-center text-white group-hover:scale-110 transition-transform">
+                        <i data-lucide="ear" class="w-4 h-4"></i>
+                    </div>
+                    <span class="font-medium">知情保障</span>
+                </button>
+                <button onclick="activateFeature(3)" class="feature-tab px-6 py-3 rounded-xl bg-white shadow-lg hover:shadow-xl transition-all border border-slate-100 flex items-center gap-2 group">
+                    <div class="w-8 h-8 rounded-lg normal-green flex items-center justify-center text-white group-hover:scale-110 transition-transform">
+                        <i data-lucide="heart-handshake" class="w-4 h-4"></i>
+                    </div>
+                    <span class="font-medium">持续陪伴</span>
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Feature 1: 智能导诊 (Safety First) -->
+    <section id="triage" class="py-20 px-6 relative">
+        <div class="max-w-7xl mx-auto">
+            <div class="grid lg:grid-cols-2 gap-12 items-center">
+                <div>
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="w-12 h-12 rounded-2xl emergency-red flex items-center justify-center text-white shadow-lg shadow-red-200">
+                            <i data-lucide="shield-alert" class="w-6 h-6"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-3xl font-bold text-slate-800">智能导诊</h2>
+                            <p class="text-red-600 font-medium">安全为先 · 分级诊疗</p>
+                        </div>
+                    </div>
+                    <p class="text-slate-600 mb-8 text-lg leading-relaxed">
+                        患者描述症状或上传伤口照片，AI通过规则树判断急诊级别。当置信度低于90%时，自动转接人工远程陪护，确保不漏诊、不误诊。
+                    </p>
+                    
+                    <div class="space-y-4">
+                        <div class="flex items-start gap-4 p-4 rounded-xl bg-white/60 border border-white">
+                            <div class="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0 mt-1">
+                                <span class="text-red-600 font-bold text-sm">1</span>
+                            </div>
+                            <div>
+                                <h4 class="font-semibold text-slate-800">多模态症状采集</h4>
+                                <p class="text-sm text-slate-600">支持文字描述、语音输入、伤口照片AI识别</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start gap-4 p-4 rounded-xl bg-white/60 border border-white">
+                            <div class="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center flex-shrink-0 mt-1">
+                                <span class="text-orange-600 font-bold text-sm">2</span>
+                            </div>
+                            <div>
+                                <h4 class="font-semibold text-slate-800">智能分级分诊</h4>
+                                <p class="text-sm text-slate-600">红色（危急）/ 黄色（紧急）/ 绿色（普通）三级预警</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start gap-4 p-4 rounded-xl bg-white/60 border border-white">
+                            <div class="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0 mt-1">
+                                <span class="text-blue-600 font-bold text-sm">3</span>
+                            </div>
+                            <div>
+                                <h4 class="font-semibold text-slate-800">院内导航规划</h4>
+                                <p class="text-sm text-slate-600">自动推荐最优科室并生成实时导航路径</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Interactive Demo -->
+                <div class="relative">
+                    <div class="glass-panel rounded-3xl p-6 shadow-2xl">
+                        <div class="flex justify-between items-center mb-6">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white">
+                                    <i data-lucide="bot" class="w-5 h-5"></i>
+                                </div>
+                                <div>
+                                    <h3 class="font-bold text-slate-800">AI 导诊助手</h3>
+                                    <p class="text-xs text-slate-500">在线 | 响应时间 < 1s</p>
+                                </div>
+                            </div>
+                            <div class="flex gap-2">
+                                <span class="px-3 py-1 rounded-full bg-green-100 text-green-700 text-xs font-medium flex items-center gap-1">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
+                                    系统正常
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Chat Interface -->
+                        <div class="bg-slate-50 rounded-2xl p-4 h-96 overflow-y-auto mb-4 space-y-4" id="triageChat">
+                            <div class="chat-bubble flex gap-3">
+                                <div class="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0">
+                                    <i data-lucide="bot" class="w-4 h-4 text-white"></i>
+                                </div>
+                                <div class="bg-white p-3 rounded-2xl rounded-tl-none shadow-sm max-w-[80%]">
+                                    <p class="text-sm text-slate-700">您好，我是智能导诊助手。请描述您的症状，或上传患处照片，我将为您评估紧急程度并推荐科室。</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Input Area -->
+                        <div class="flex gap-2">
+                            <button class="p-3 rounded-xl bg-slate-100 hover:bg-slate-200 transition-colors text-slate-600">
+                                <i data-lucide="camera" class="w-5 h-5"></i>
+                            </button>
+                            <input type="text" id="symptomInput" placeholder="描述您的症状..." 
+                                class="flex-1 px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                onkeypress="if(event.key==='Enter') simulateTriage()">
+                            <button onclick="simulateTriage()" class="px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors">
+                                发送
+                            </button>
+                        </div>
+
+                        <!-- Triage Result Panel (Hidden by default) -->
+                        <div id="triageResult" class="hidden mt-4 p-4 rounded-xl border-l-4 bg-white shadow-lg transform transition-all">
+                            <div class="flex justify-between items-start mb-3">
+                                <div>
+                                    <h4 class="font-bold text-lg" id="triageLevel">评估结果</h4>
+                                    <p class="text-sm text-slate-600 mt-1" id="triageDesc">建议立即就诊</p>
+                                </div>
+                                <div class="text-right">
+                                    <div class="text-2xl font-bold" id="confidenceScore">95%</div>
+                                    <div class="text-xs text-slate-500">置信度</div>
+                                </div>
+                            </div>
+                            <div class="w-full bg-slate-200 rounded-full h-2 mb-3">
+                                <div id="confidenceBar" class="confidence-bar h-2 rounded-full bg-blue-500" style="width: 0%"></div>
+                            </div>
+                            <div class="flex gap-2 mt-4">
+                                <button class="flex-1 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors">
+                                    查看导航路径
+                                </button>
+                                <button id="humanEscalateBtn" class="hidden flex-1 py-2 rounded-lg bg-orange-100 text-orange-700 text-sm font-medium hover:bg-orange-200 transition-colors">
+                                    转接人工陪护
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Decorative Elements -->
+                    <div class="absolute -top-6 -right-6 w-24 h-24 bg-red-100 rounded-full blur-2xl opacity-60"></div>
+                    <div class="absolute -bottom-6 -left-6 w-32 h-32 bg-blue-100 rounded-full blur-2xl opacity-60"></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Feature 2: 诊前预问诊 (Efficiency) -->
+    <section id="previsit" class="py-20 px-6 bg-white/50">
+        <div class="max-w-7xl mx-auto">
+            <div class="grid lg:grid-cols-2 gap-12 items-center">
+                <!-- Interactive Report Demo -->
+                <div class="order-2 lg:order-1 relative">
+                    <div class="glass-panel rounded-3xl p-6 shadow-2xl bg-white">
+                        <div class="flex justify-between items-center mb-6 border-b border-slate-100 pb-4">
+                            <div>
+                                <h3 class="font-bold text-slate-800 text-lg">智能预问诊报告</h3>
+                                <p class="text-sm text-slate-500">生成时间: 2026-04-09 14:30</p>
+                            </div>
+                            <div class="flex gap-2">
+                                <button class="p-2 rounded-lg hover:bg-slate-100 text-slate-600">
+                                    <i data-lucide="download" class="w-5 h-5"></i>
+                                </button>
+                                <button class="p-2 rounded-lg hover:bg-slate-100 text-slate-600">
+                                    <i data-lucide="share-2" class="w-5 h-5"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="space-y-4 mb-6">
+                            <div class="flex items-center gap-4 p-3 bg-blue-50 rounded-xl border border-blue-100">
+                                <div class="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white">
+                                    <i data-lucide="user" class="w-5 h-5"></i>
+                                </div>
+                                <div class="flex-1">
+                                    <p class="text-sm text-slate-500">患者</p>
+                                    <p class="font-semibold text-slate-800">张先生 (35岁)</p>
+                                </div>
+                                <div class="text-right">
+                                    <p class="text-sm text-slate-500">预约科室</p>
+                                    <p class="font-semibold text-blue-600">消化内科</p>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-3">
+                                <div class="p-3 rounded-xl bg-slate-50 border border-slate-100">
+                                    <p class="text-xs text-slate-500 mb-1">主诉症状</p>
+                                    <p class="text-sm font-medium text-slate-800">上腹部疼痛3天，伴有反酸</p>
+                                </div>
+                                <div class="p-3 rounded-xl bg-slate-50 border border-slate-100">
+                                    <p class="text-xs text-slate-500 mb-1">既往病史</p>
+                                    <p class="text-sm font-medium text-slate-800">慢性胃炎 (2019年确诊)</p>
+                                </div>
+                                <div class="p-3 rounded-xl bg-slate-50 border border-slate-100">
+                                    <p class="text-xs text-slate-500 mb-1">过敏史</p>
+                                    <p class="text-sm font-medium text-green-600">无已知过敏</p>
+                                </div>
+                                <div class="p-3 rounded-xl bg-slate-50 border border-slate-100">
+                                    <p class="text-xs text-slate-500 mb-1">当前用药</p>
+                                    <p class="text-sm font-medium text-slate-800">奥美拉唑 20mg qd</p>
+                                </div>
+                            </div>
+
+                            <div class="p-4 rounded-xl bg-amber-50 border border-amber-100">
+                                <div class="flex items-center gap-2 mb-2">
+                                    <i data-lucide="alert-circle" class="w-4 h-4 text-amber-600"></i>
+                                    <span class="font-semibold text-amber-800 text-sm">AI 问诊摘要</span>
+                                </div>
+                                <p class="text-sm text-amber-900 leading-relaxed">
+                                    患者自述餐后疼痛加重，夜间偶有痛醒。无呕血黑便，体重无明显下降。建议完善胃镜检查，排除溃疡可能。
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center justify-between pt-4 border-t border-slate-100">
+                            <div class="flex items-center gap-2">
+                                <div class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+                                <span class="text-sm text-slate-600">已推送至诊室终端</span>
+                            </div>
+                            <button class="text-sm text-blue-600 font-medium hover:underline">查看双语版本 (EN/CN)</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="order-1 lg:order-2">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-cyan-400 flex items-center justify-center text-white shadow-lg shadow-blue-200">
+                            <i data-lucide="zap" class="w-6 h-6"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-3xl font-bold text-slate-800">诊前预问诊</h2>
+                            <p class="text-blue-600 font-medium">效率提升 · 结构化报告</p>
+                        </div>
+                    </div>
+                    <p class="text-slate-600 mb-8 text-lg leading-relaxed">
+                        AI主动询问病史、过敏史、当前用药情况，自动生成结构化双语问诊报告，在患者见到医生前推送至诊室，节省面诊时间30%以上。
+                    </p>
+
+                    <div class="space-y-4">
+                        <div class="feature-card p-5 rounded-2xl bg-white border border-slate-100 shadow-sm">
+                            <div class="flex items-center gap-3 mb-2">
+                                <i data-lucide="message-square" class="w-5 h-5 text-blue-500"></i>
+                                <h4 class="font-semibold text-slate-800">智能对话采集</h4>
+                            </div>
+                            <p class="text-sm text-slate-600">自然语言处理技术，引导患者完整描述病情，自动提取关键医学信息</p>
+                        </div>
+                        <div class="feature-card p-5 rounded-2xl bg-white border border-slate-100 shadow-sm">
+                            <div class="flex items-center gap-3 mb-2">
+                                <i data-lucide="file-text" class="w-5 h-5 text-blue-500"></i>
+                                <h4 class="font-semibold text-slate-800">结构化病历生成</h4>
+                            </div>
+                            <p class="text-sm text-slate-600">符合HL7标准的电子病历格式，支持中文/英文双语切换</p>
+                        </div>
+                        <div class="feature-card p-5 rounded-2xl bg-white border border-slate-100 shadow-sm">
+                            <div class="flex items-center gap-3 mb-2">
+                                <i data-lucide="send" class="w-5 h-5 text-blue-500"></i>
+                                <h4 class="font-semibold text-slate-800">实时同步诊室</h4>
+                            </div>
+                            <p class="text-sm text-slate-600">医生提前了解病情，面诊时直接切入重点，提升诊疗效率</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Feature 3: 诊中陪护 (Informed Consent) -->
+    <section id="accompaniment" class="py-20 px-6">
+        <div class="max-w-7xl mx-auto">
+            <div class="text-center mb-16">
+                <div class="flex items-center justify-center gap-3 mb-4">
+                    <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-400 flex items-center justify-center text-white shadow-lg shadow-purple-200">
+                        <i data-lucide="ear" class="w-6 h-6"></i>
+                    </div>
+                </div>
+                <h2 class="text-3xl font-bold text-slate-800 mb-2">诊中陪护</h2>
+                <p class="text-purple-600 font-medium mb-4">知情保障 · 医患沟通备忘录</p>
+                <p class="text-slate-600 max-w-2xl mx-auto">
+                    实时捕捉医患对话中的关键医学术语，即时生成通俗易懂的解释，确保患者充分理解诊疗方案，构建信任医患关系。
+                </p>
+            </div>
+
+            <div class="grid lg:grid-cols-3 gap-6">
+                <!-- Real-time Recording Card -->
+                <div class="lg:col-span-2 glass-panel rounded-3xl p-6 shadow-2xl">
+                    <div class="flex justify-between items-center mb-6">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center">
+                                <i data-lucide="mic" class="w-5 h-5 text-purple-600"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-slate-800">实时语音转录</h3>
+                                <p class="text-xs text-slate-500">AI 正在聆听并分析对话...</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2 px-3 py-1 rounded-full bg-red-50 border border-red-100">
+                            <div class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></div>
+                            <span class="text-xs font-medium text-red-600">录音中</span>
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-50 rounded-2xl p-6 h-80 overflow-y-auto space-y-4" id="conversationLog">
+                        <div class="flex gap-4">
+                            <div class="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0 text-white text-xs font-bold">医</div>
+                            <div class="flex-1">
+                                <p class="text-sm text-slate-700 mb-1">根据您的症状，我怀疑可能是<span class="bg-yellow-200 px-1 rounded">急性胃炎</span>，建议您做一个<span class="bg-yellow-200 px-1 rounded">CBC</span>检查。</p>
+                                <span class="text-xs text-slate-400">14:32:15</span>
+                            </div>
+                        </div>
+                        
+                        <div class="flex gap-4">
+                            <div class="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center flex-shrink-0 text-white text-xs font-bold">患</div>
+                            <div class="flex-1">
+                                <p class="text-sm text-slate-700 mb-1">CBC是什么检查？严重吗？</p>
+                                <span class="text-xs text-slate-400">14:32:45</span>
+                            </div>
+                        </div>
+
+                        <div class="flex gap-4">
+                            <div class="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0 text-white text-xs font-bold">医</div>
+                            <div class="flex-1">
+                                <p class="text-sm text-slate-700 mb-1">就是<span class="bg-yellow-200 px-1 rounded">血常规</span>检查，主要看有没有<span class="bg-yellow-200 px-1 rounded">leukocytosis</span>，也就是白细胞升高，提示可能有感染。</p>
+                                <span class="text-xs text-slate-400">14:33:02</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- AI Memo Generator -->
+                    <div class="mt-4 p-4 rounded-xl bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-100">
+                        <div class="flex items-center gap-2 mb-2">
+                            <i data-lucide="sparkles" class="w-4 h-4 text-purple-600"></i>
+                            <span class="text-sm font-bold text-purple-800">AI 生成沟通备忘录</span>
+                        </div>
+                        <div class="space-y-2" id="memoContainer">
+                            <div class="flex items-start gap-2 text-sm">
+                                <i data-lucide="check-circle-2" class="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0"></i>
+                                <p class="text-slate-700"><span class="font-semibold">CBC (Complete Blood Count):</span> 中文名为"全血细胞计数"或"血常规"，是一种基础的血液检查。</p>
+                            </div>
+                            <div class="flex items-start gap-2 text-sm">
+                                <i data-lucide="check-circle-2" class="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0"></i>
+                                <p class="text-slate-700"><span class="font-semibold">Leukocytosis:</span> 意思是"白细胞增多/白细胞偏高"，通常提示身体可能有炎症或感染。</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Side Panel: Key Terms -->
+                <div class="space-y-4">
+                    <div class="glass-panel rounded-2xl p-5 shadow-lg">
+                        <h4 class="font-bold text-slate-800 mb-4 flex items-center gap-2">
+                            <i data-lucide="bookmark" class="w-4 h-4 text-purple-500"></i>
+                            关键术语解释
+                        </h4>
+                        <div class="space-y-3" id="keyTerms">
+                            <div class="p-3 rounded-lg bg-white border border-slate-100 hover:border-purple-300 transition-colors cursor-pointer group">
+                                <div class="flex justify-between items-start mb-1">
+                                    <span class="font-semibold text-slate-800 text-sm">Acute Gastritis</span>
+                                    <span class="text-xs text-slate-400">医学术语</span>
+                                </div>
+                                <p class="text-xs text-slate-600">急性胃炎 - 胃黏膜的急性炎症</p>
+                                <div class="mt-2 flex gap-2">
+                                    <button class="text-xs px-2 py-1 rounded bg-purple-100 text-purple-700 hover:bg-purple-200 transition-colors">详细解释</button>
+                                    <button class="text-xs px-2 py-1 rounded bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors">相关资料</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="glass-panel rounded-2xl p-5 shadow-lg bg-gradient-to-br from-slate-800 to-slate-900 text-white">
+                        <h4 class="font-bold mb-3 flex items-center gap-2">
+                            <i data-lucide="shield-check" class="w-4 h-4 text-green-400"></i>
+                            知情同意确认
+                        </h4>
+                        <p class="text-sm text-slate-300 mb-4">确保您理解医生的诊断建议和治疗方案</p>
+                        <div class="space-y-2 mb-4">
+                            <label class="flex items-center gap-2 text-sm cursor-pointer">
+                                <input type="checkbox" class="rounded border-slate-600 text-purple-500 focus:ring-purple-500 bg-slate-700" checked>
+                                <span>我理解需要做血常规检查</span>
+                            </label>
+                            <label class="flex items-center gap-2 text-sm cursor-pointer">
+                                <input type="checkbox" class="rounded border-slate-600 text-purple-500 focus:ring-purple-500 bg-slate-700" checked>
+                                <span>我了解可能的病因是胃炎</span>
+                            </label>
+                        </div>
+                        <button class="w-full py-2 rounded-lg bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium transition-colors">
+                            确认并保存记录
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Feature 4: 诊后关怀 (Continuous Care) -->
+    <section id="postcare" class="py-20 px-6 bg-white/50">
+        <div class="max-w-7xl mx-auto">
+            <div class="grid lg:grid-cols-2 gap-12 items-center">
+                <div>
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="w-12 h-12 rounded-2xl normal-green flex items-center justify-center text-white shadow-lg shadow-green-200">
+                            <i data-lucide="heart-handshake" class="w-6 h-6"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-3xl font-bold text-slate-800">诊后关怀</h2>
+                            <p class="text-green-600 font-medium">持续陪伴 · 全周期管理</p>
+                        </div>
+                    </div>
+                    <p class="text-slate-600 mb-8 text-lg leading-relaxed">
+                        离院不是结束，而是康复的开始。用药提醒口语化解释、个性化康复视频推送、每日恢复情况采集，异常时自动预警，真正实现全周期健康管理。
+                    </p>
+
+                    <div class="grid grid-cols-1 gap-4">
+                        <div class="feature-card p-5 rounded-2xl bg-white border border-slate-100 shadow-sm flex items-start gap-4">
+                            <div class="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center flex-shrink-0">
+                                <i data-lucide="pill" class="w-6 h-6 text-blue-600"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-slate-800 mb-1">智能用药提醒</h4>
+                                <p class="text-sm text-slate-600 mb-2">"Take with food" → "随餐服用，减少胃部不适"</p>
+                                <div class="flex gap-2">
+                                    <span class="px-2 py-1 rounded bg-blue-50 text-blue-700 text-xs">口语化解释</span>
+                                    <span class="px-2 py-1 rounded bg-blue-50 text-blue-700 text-xs">定时提醒</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="feature-card p-5 rounded-2xl bg-white border border-slate-100 shadow-sm flex items-start gap-4">
+                            <div class="w-12 h-12 rounded-xl bg-purple-100 flex items-center justify-center flex-shrink-0">
+                                <i data-lucide="video" class="w-6 h-6 text-purple-600"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-slate-800 mb-1">个性化康复指导</h4>
+                                <p class="text-sm text-slate-600 mb-2">根据病情推送定制化康复训练视频</p>
+                                <div class="flex gap-2">
+                                    <span class="px-2 py-1 rounded bg-purple-50 text-purple-700 text-xs">视频指导</span>
+                                    <span class="px-2 py-1 rounded bg-purple-50 text-purple-700 text-xs">进度追踪</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="feature-card p-5 rounded-2xl bg-white border border-slate-100 shadow-sm flex items-start gap-4">
+                            <div class="w-12 h-12 rounded-xl bg-orange-100 flex items-center justify-center flex-shrink-0">
+                                <i data-lucide="activity" class="w-6 h-6 text-orange-600"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-slate-800 mb-1">每日健康监测</h4>
+                                <p class="text-sm text-slate-600 mb-2">采集恢复情况，AI分析异常自动预警</p>
+                                <div class="flex gap-2">
+                                    <span class="px-2 py-1 rounded bg-orange-50 text-orange-700 text-xs">异常预警</span>
+                                    <span class="px-2 py-1 rounded bg-orange-50 text-orange-700 text-xs">数据可视化</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Mobile App Preview -->
+                <div class="relative flex justify-center">
+                    <div class="w-80 bg-slate-900 rounded-[3rem] p-3 shadow-2xl border-8 border-slate-800 relative overflow-hidden">
+                        <!-- Notch -->
+                        <div class="absolute top-0 left-1/2 transform -translate-x-1/2 w-32 h-7 bg-slate-800 rounded-b-2xl z-20"></div>
+                        
+                        <!-- Screen -->
+                        <div class="bg-slate-50 rounded-[2.5rem] overflow-hidden h-[600px] relative">
+                            <!-- Status Bar -->
+                            <div class="h-12 bg-white flex justify-between items-center px-6 pt-2">
+                                <span class="text-xs font-semibold">9:41</span>
+                                <div class="flex gap-1">
+                                    <i data-lucide="signal" class="w-3 h-3"></i>
+                                    <i data-lucide="wifi" class="w-3 h-3"></i>
+                                    <i data-lucide="battery-full" class="w-3 h-3"></i>
+                                </div>
+                            </div>
+
+                            <!-- App Content -->
+                            <div class="p-4 space-y-4 overflow-y-auto h-full pb-20">
+                                <div class="flex justify-between items-center mb-4">
+                                    <div>
+                                        <p class="text-xs text-slate-500">下午好</p>
+                                        <h3 class="font-bold text-slate-800">张先生</h3>
+                                    </div>
+                                    <div class="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white">
+                                        <i data-lucide="user" class="w-5 h-5"></i>
+                                    </div>
+                                </div>
+
+                                <!-- Next Medicine -->
+                                <div class="bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl p-4 text-white shadow-lg">
+                                    <div class="flex justify-between items-start mb-3">
+                                        <div>
+                                            <p class="text-blue-100 text-xs mb-1">下次用药</p>
+                                            <h4 class="font-bold text-lg">奥美拉唑</h4>
+                                        </div>
+                                        <div class="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
+                                            <i data-lucide="pill" class="w-5 h-5"></i>
+                                        </div>
+                                    </div>
+                                    <p class="text-sm text-blue-100 mb-3">晚餐后服用，保护胃黏膜</p>
+                                    <div class="flex items-center gap-2 text-xs bg-white/20 rounded-lg p-2">
+                                        <i data-lucide="clock" class="w-3 h-3"></i>
+                                        <span>18:30 提醒</span>
+                                    </div>
+                                </div>
+
+                                <!-- Daily Check-in -->
+                                <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
+                                    <h4 class="font-bold text-slate-800 mb-3 text-sm">今日恢复情况</h4>
+                                    <div class="space-y-3">
+                                        <div>
+                                            <div class="flex justify-between text-xs mb-1">
+                                                <span class="text-slate-600">腹痛程度</span>
+                                                <span class="text-green-600 font-medium">轻微 (2/10)</span>
+                                            </div>
+                                            <div class="w-full bg-slate-100 rounded-full h-2">
+                                                <div class="bg-green-500 h-2 rounded-full" style="width: 20%"></div>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <div class="flex justify-between text-xs mb-1">
+                                                <span class="text-slate-600">食欲</span>
+                                                <span class="text-blue-600 font-medium">正常 (8/10)</span>
+                                            </div>
+                                            <div class="w-full bg-slate-100 rounded-full h-2">
+                                                <div class="bg-blue-500 h-2 rounded-full" style="width: 80%"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <button class="w-full mt-3 py-2 rounded-lg bg-slate-100 text-slate-700 text-xs font-medium hover:bg-slate-200 transition-colors">
+                                        更新今日状态
+                                    </button>
+                                </div>
+
+                                <!-- Recovery Video -->
+                                <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
+                                    <div class="flex items-center gap-2 mb-3">
+                                        <i data-lucide="play-circle" class="w-4 h-4 text-purple-500"></i>
+                                        <h4 class="font-bold text-slate-800 text-sm">今日康复指导</h4>
+                                    </div>
+                                    <div class="relative rounded-xl overflow-hidden bg-slate-200 h-32 flex items-center justify-center group cursor-pointer">
+                                        <img src="https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=400&h=300&fit=crop" alt="康复训练" class="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity">
+                                        <div class="absolute inset-0 flex items-center justify-center">
+                                            <div class="w-12 h-12 rounded-full bg-white/90 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                                                <i data-lucide="play" class="w-5 h-5 text-purple-600 ml-1"></i>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <p class="text-xs text-slate-600 mt-2">胃部保养按摩手法 (3分钟)</p>
+                                </div>
+                            </div>
+
+                            <!-- Bottom Nav -->
+                            <div class="absolute bottom-0 left-0 right-0 bg-white border-t border-slate-200 px-6 py-3 flex justify-between items-center">
+                                <button class="flex flex-col items-center gap-1 text-blue-600">
+                                    <i data-lucide="home" class="w-5 h-5"></i>
+                                    <span class="text-[10px]">首页</span>
+                                </button>
+                                <button class="flex flex-col items-center gap-1 text-slate-400 hover:text-slate-600">
+                                    <i data-lucide="calendar" class="w-5 h-5"></i>
+                                    <span class="text-[10px]">日程</span>
+                                </button>
+                                <button class="flex flex-col items-center gap-1 text-slate-400 hover:text-slate-600">
+                                    <i data-lucide="message-circle" class="w-5 h-5"></i>
+                                    <span class="text-[10px]">咨询</span>
+                                </button>
+                                <button class="flex flex-col items-center gap-1 text-slate-400 hover:text-slate-600">
+                                    <i data-lucide="user" class="w-5 h-5"></i>
+                                    <span class="text-[10px]">我的</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Floating Alert -->
+                    <div class="absolute -right-4 top-20 bg-white rounded-xl p-3 shadow-xl border border-red-100 animate-bounce" style="animation-duration: 3s;">
+                        <div class="flex items-center gap-2">
+                            <div class="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center">
+                                <i data-lucide="alert-triangle" class="w-4 h-4 text-red-600"></i>
+                            </div>
+                            <div>
+                                <p class="text-xs font-bold text-slate-800">异常预警</p>
+                                <p class="text-[10px] text-slate-600">体温超过38°C</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- System Architecture Overview -->
+    <section class="py-20 px-6 bg-slate-900 text-white">
+        <div class="max-w-7xl mx-auto">
+            <div class="text-center mb-12">
+                <h2 class="text-3xl font-bold mb-4">系统架构概览</h2>
+                <p class="text-slate-400">多模态AI技术栈，确保医疗安全与效率</p>
+            </div>
+
+            <div class="grid md:grid-cols-4 gap-6">
+                <div class="bg-slate-800 rounded-2xl p-6 border border-slate-700 hover:border-blue-500 transition-colors group">
+                    <div class="w-12 h-12 rounded-xl bg-blue-500/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                        <i data-lucide="brain" class="w-6 h-6 text-blue-400"></i>
+                    </div>
+                    <h3 class="font-bold mb-2">NLP引擎</h3>
+                    <p class="text-sm text-slate-400">医疗术语识别、意图理解、双语翻译</p>
+                </div>
+                <div class="bg-slate-800 rounded-2xl p-6 border border-slate-700 hover:border-purple-500 transition-colors group">
+                    <div class="w-12 h-12 rounded-xl bg-purple-500/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                        <i data-lucide="eye" class="w-6 h-6 text-purple-400"></i>
+                    </div>
+                    <h3 class="font-bold mb-2">计算机视觉</h3>
+                    <p class="text-sm text-slate-400">伤口识别、影像分析、皮肤病变检测</p>
+                </div>
+                <div class="bg-slate-800 rounded-2xl p-6 border border-slate-700 hover:border-green-500 transition-colors group">
+                    <div class="w-12 h-12 rounded-xl bg-green-500/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                        <i data-lucide="git-branch" class="w-6 h-6 text-green-400"></i>
+                    </div>
+                    <h3 class="font-bold mb-2">决策树引擎</h3>
+                    <p class="text-sm text-slate-400">急诊分级、科室推荐、置信度评估</p>
+                </div>
+                <div class="bg-slate-800 rounded-2xl p-6 border border-slate-700 hover:border-orange-500 transition-colors group">
+                    <div class="w-12 h-12 rounded-xl bg-orange-500/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                        <i data-lucide="shield" class="w-6 h-6 text-orange-400"></i>
+                    </div>
+                    <h3 class="font-bold mb-2">安全网关</h3>
+                    <p class="text-sm text-slate-400">数据加密、隐私保护、人工接管机制</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-slate-950 text-slate-400 py-12 px-6 border-t border-slate-800">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center">
+            <div class="flex items-center gap-3 mb-4 md:mb-0">
+                <div class="w-8 h-8 medical-cross flex items-center justify-center">
+                    <i data-lucide="activity" class="text-white w-4 h-4"></i>
+                </div>
+                <span class="text-white font-semibold">MediCare AI 3.2</span>
+            </div>
+            <div class="text-sm">
+                <p>&copy; 2026 智能医疗陪护系统. 保留所有权利.</p>
+                <p class="mt-1 text-xs text-slate-600">本系统仅供演示，不构成医疗建议。紧急情况请拨打120。</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Initialize Lucide icons
+        lucide.createIcons();
+
+        // Smooth scroll to section
+        function scrollToSection(id) {
+            document.getElementById(id).scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // Activate feature tab
+        function activateFeature(index) {
+            const sections = ['triage', 'previsit', 'accompaniment', 'postcare'];
+            scrollToSection(sections[index]);
+        }
+
+        // Simulate Triage Interaction
+        function simulateTriage() {
+            const input = document.getElementById('symptomInput');
+            const chat = document.getElementById('triageChat');
+            const result = document.getElementById('triageResult');
+            const value = input.value.trim();
+            
+            if (!value) return;
+
+            // Add user message
+            const userMsg = document.createElement('div');
+            userMsg.className = 'chat-bubble flex gap-3 justify-end';
+            userMsg.innerHTML = `
+                <div class="bg-blue-600 p-3 rounded-2xl rounded-tr-none shadow-sm max-w-[80%]">
+                    <p class="text-sm text-white">${value}</p>
+                </div>
+            `;
+            chat.appendChild(userMsg);
+            input.value = '';
+            chat.scrollTop = chat.scrollHeight;
+
+            // Simulate AI thinking
+            setTimeout(() => {
+                const aiMsg = document.createElement('div');
+                aiMsg.className = 'chat-bubble flex gap-3';
+                aiMsg.innerHTML = `
+                    <div class="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0">
+                        <i data-lucide="bot" class="w-4 h-4 text-white"></i>
+                    </div>
+                    <div class="bg-white p-3 rounded-2xl rounded-tl-none shadow-sm max-w-[80%]">
+                        <div class="flex gap-1">
+                            <div class="w-2 h-2 rounded-full bg-slate-400 typing-dot"></div>
+                            <div class="w-2 h-2 rounded-full bg-slate-400 typing-dot"></div>
+                            <div class="w-2 h-2 rounded-full bg-slate-400 typing-dot"></div>
+                        </div>
+                    </div>
+                `;
+                chat.appendChild(aiMsg);
+                chat.scrollTop = chat.scrollHeight;
+                lucide.createIcons();
+
+                // Show result after delay
+                setTimeout(() => {
+                    aiMsg.remove();
+                    
+                    const responseMsg = document.createElement('div');
+                    responseMsg.className = 'chat-bubble flex gap-3';
+                    
+                    // Determine triage level based on keywords
+                    let level = 'normal-green';
+                    let levelText = '普通门诊 (绿色)';
+                    let desc = '建议预约消化内科门诊，非紧急情况。';
+                    let confidence = '92%';
+                    let showEscalate = false;
+
+                    if (value.includes('痛') || value.includes('疼')) {
+                        if (value.includes('很') || value.includes('剧烈') || value.includes('受不了')) {
+                            level = 'urgent-yellow';
+                            levelText = '紧急 (黄色)';
+                            desc = '疼痛程度较高，建议尽快就诊，已为您优先排队。';
+                            confidence = '88%';
+                            showEscalate = true;
+                        }
+                    }
+                    if (value.includes('血') || value.includes('昏迷') || value.includes('无法呼吸')) {
+                        level = 'emergency-red';
+                        levelText = '危急 (红色)';
+                        desc = '检测到危急症状，请立即前往急诊室或拨打120！';
+                        confidence = '96%';
+                        showEscalate = false;
+                    }
+
+                    responseMsg.innerHTML = `
+                        <div class="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0">
+                            <i data-lucide="bot" class="w-4 h-4 text-white"></i>
+                        </div>
+                        <div class="bg-white p-3 rounded-2xl rounded-tl-none shadow-sm max-w-[80%]">
+                            <p class="text-sm text-slate-700">已收到您的描述，正在进行智能分诊评估...</p>
+                        </div>
+                    `;
+                    chat.appendChild(responseMsg);
+                    chat.scrollTop = chat.scrollHeight;
+                    lucide.createIcons();
+
+                    // Show result panel
+                    setTimeout(() => {
+                        result.classList.remove('hidden');
+                        result.classList.add('fade-in');
+                        
+                        const levelEl = document.getElementById('triageLevel');
+                        const descEl = document.getElementById('triageDesc');
+                        const confEl = document.getElementById('confidenceScore');
+                        const confBar = document.getElementById('confidenceBar');
+                        const escalateBtn = document.getElementById('humanEscalateBtn');
+
+                        levelEl.textContent = levelText;
+                        levelEl.className = `font-bold text-lg ${level === 'emergency-red' ? 'text-red-600' : level === 'urgent-yellow' ? 'text-amber-600' : 'text-green-600'}`;
+                        descEl.textContent = desc;
+                        confEl.textContent = confidence;
+                        confBar.style.width = confidence;
+                        confBar.className = `confidence-bar h-2 rounded-full ${level === 'emergency-red' ? 'bg-red-500' : level === 'urgent-yellow' ? 'bg-amber-500' : 'bg-green-500'}`;
+                        
+                        if (showEscalate) {
+                            escalateBtn.classList.remove('hidden');
+                        } else {
+                            escalateBtn.classList.add('hidden');
+                        }
+
+                        if (level === 'emergency-red') {
+                            result.classList.add('pulse-ring');
+                            result.style.borderLeftColor = '#ef4444';
+                        } else if (level === 'urgent-yellow') {
+                            result.style.borderLeftColor = '#f59e0b';
+                        } else {
+                            result.style.borderLeftColor = '#10b981';
+                        }
+                    }, 800);
+                }, 1500);
+            }, 500);
+        }
+
+        // Simulate adding medical terms to memo in real-time
+        setInterval(() => {
+            const memoContainer = document.getElementById('memoContainer');
+            const terms = [
+                { term: 'Endoscopy', def: '内镜检查 - 使用软管摄像头观察消化道内部' },
+                { term: 'Biopsy', def: '活检 - 取少量组织样本进行病理检查' }
+            ];
+            
+            // Randomly add terms if less than 4
+            if (memoContainer.children.length < 4 && Math.random() > 0.7) {
+                const term = terms[Math.floor(Math.random() * terms.length)];
+                const div = document.createElement('div');
+                div.className = 'flex items-start gap-2 text-sm chat-bubble';
+                div.innerHTML = `
+                    <i data-lucide="check-circle-2" class="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0"></i>
+                    <p class="text-slate-700"><span class="font-semibold">${term.term}:</span> ${term.def}</p>
+                `;
+                memoContainer.appendChild(div);
+                lucide.createIcons();
+            }
+        }, 5000);
+
+        // Add parallax effect to wave background
+        document.addEventListener('mousemove', (e) => {
+            const wave = document.querySelector('.wave-bg');
+            const x = e.clientX / window.innerWidth;
+            const y = e.clientY / window.innerHeight;
+            wave.style.transform = `translate(${x * 20}px, ${y * 20}px)`;
+        });
+
+        // Intersection Observer for fade-in animations
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('fade-in');
+                    observer.unobserve(entry.target);
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('.feature-card').forEach((el) => observer.observe(el));
+    </script>
+</body>
+</html>
